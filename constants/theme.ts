@@ -43,4 +43,6 @@ export const Accent = {
   danger: "#E0566C",
   google: "#4285F4",
   apple: "#8E8E93",
+  outlook: "#0078D4",
+  samsung: "#1428A0",
 } as const;

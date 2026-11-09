@@ -27,6 +27,7 @@ interface UserRow {
   password_salt: string;
   avatar_color: string;
   initials: string;
+  calendar_private: number;
 }
 
 function toAuthUser(row: UserRow): AuthUser {
@@ -36,6 +37,7 @@ function toAuthUser(row: UserRow): AuthUser {
     username: row.username,
     initials: row.initials,
     avatarColor: row.avatar_color,
+    calendarPrivate: !!row.calendar_private,
   };
 }
 
@@ -85,7 +87,7 @@ export async function createUser(params: {
     [id, name, username, hash, salt, avatarColor, initials, createdAt]
   );
 
-  return { id, name, username, initials, avatarColor };
+  return { id, name, username, initials, avatarColor, calendarPrivate: false };
 }
 
 export async function verifyLogin(
@@ -109,6 +111,14 @@ export async function findAuthUserById(id: string): Promise<AuthUser | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<UserRow>("SELECT * FROM users WHERE id = ?", [id]);
   return row ? toAuthUser(row) : null;
+}
+
+export async function setCalendarPrivacy(userId: string, isPrivate: boolean): Promise<void> {
+  const db = await getDb();
+  await db.runAsync("UPDATE users SET calendar_private = ? WHERE id = ?", [
+    isPrivate ? 1 : 0,
+    userId,
+  ]);
 }
 
 export async function isUserInAnyApartment(userId: string): Promise<boolean> {

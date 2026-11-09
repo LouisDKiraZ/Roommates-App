@@ -41,6 +41,7 @@ interface MemberRow {
   name: string;
   initials: string;
   avatar_color: string;
+  calendar_private: number;
 }
 
 async function loadApartment(
@@ -49,7 +50,7 @@ async function loadApartment(
   currentUserId: string
 ): Promise<Apartment> {
   const members = await db.getAllAsync<MemberRow>(
-    `SELECT u.id, u.name, u.initials, u.avatar_color
+    `SELECT u.id, u.name, u.initials, u.avatar_color, u.calendar_private
      FROM apartment_members am
      JOIN users u ON u.id = am.user_id
      WHERE am.apartment_id = ?
@@ -69,6 +70,7 @@ async function loadApartment(
       initials: m.initials,
       avatarColor: m.avatar_color,
       isYou: m.id === currentUserId,
+      calendarPrivate: !!m.calendar_private,
     })),
   };
 }

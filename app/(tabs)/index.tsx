@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,19 +9,34 @@ import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAppState } from "@/context/AppStateContext";
-import { calendarEvents, cleaningTasks, expenses, getRoommate } from "@/mocks/data";
+import { cleaningTasks, expenses, getRoommate } from "@/mocks/data";
 import { Accent, FontSize, FontWeight, Radius, Spacing } from "@/constants/theme";
+import { isEventActiveAt } from "@/lib/calendarRecurrence";
 
 export default function HomeScreen() {
-  const { apartment, currentUser } = useAppState();
+  const { apartment, currentUser, calendarEvents } = useAppState();
   const textMuted = useThemeColor({}, "textMuted");
   const border = useThemeColor({}, "border");
+
+  // Presence is time-sensitive, so re-check once a minute while this screen
+  // is mounted instead of only on the render that happened to load it.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!apartment || !currentUser) return null;
 
   const nextTask = cleaningTasks.find((t) => !t.done);
   const latestExpense = expenses[0];
-  const nextEvent = calendarEvents[0];
+
+  const awayNow = apartment.roommates.filter((r) =>
+    calendarEvents.some((e) => e.userId === r.id && isEventActiveAt(e, now))
+  );
+  const othersHomeNow = apartment.roommates.filter(
+    (r) => r.id !== currentUser.id && !awayNow.some((a) => a.id === r.id)
+  );
 
   return (
     <Screen edges={["top"]}>
@@ -66,11 +82,11 @@ export default function HomeScreen() {
             onPress={() => router.push("/(tabs)/expenses")}
           />
           <SummaryCard
-            icon="calendar-outline"
+            icon={othersHomeNow.length > 0 ? "people-outline" : "person-outline"}
             accent={Accent.calendar}
-            label="Next event"
-            value={nextEvent.title}
-            meta={nextEvent.date}
+            label="Right now"
+            value={othersHomeNow.length === 0 ? "You're alone" : `${othersHomeNow.length} home`}
+            meta={awayNow.length === 0 ? "Everyone's in" : `${awayNow.length} away`}
             onPress={() => router.push("/(tabs)/calendar")}
           />
           <SummaryCard

@@ -8,6 +8,10 @@ export interface Roommate {
   avatarColor: string;
   initials: string;
   isYou?: boolean;
+  // Real apartment members (see lib/repositories/apartments.ts) carry this;
+  // the mock roommates used by the still-mock cleaning/expenses screens
+  // don't bother setting it, hence optional.
+  calendarPrivate?: boolean;
 }
 
 export interface Apartment {
@@ -54,16 +58,37 @@ export interface Expense {
   splits: ExpenseSplit[];
 }
 
-export type CalendarEventSource = "local" | "google" | "apple";
+// Real, locally-persisted calendar (see lib/repositories/calendarEvents.ts,
+// lib/calendarRecurrence.ts). Every event represents a window of time its
+// owner will be away from the apartment — that's what lets roommates tell
+// whether they're alone. "none" means a one-off, non-repeating event.
+export type EventRecurrence = "none" | "daily" | "weekly" | "biweekly" | "monthly";
 
-export interface CalendarEvent {
+export type CalendarProvider = "google" | "apple" | "outlook" | "samsung";
+
+export type EventSource = "local" | CalendarProvider;
+
+export interface ScheduleEvent {
   id: string;
+  apartmentId: string;
+  userId: string;
   title: string;
-  date: string; // ISO date (day precision)
-  time?: string; // e.g. "19:00"
-  color: string;
-  source: CalendarEventSource;
-  attendeeIds: string[];
+  description: string;
+  startDate: string; // ISO date of the first/only occurrence, YYYY-MM-DD
+  startTime: string; // "HH:MM", 24h
+  endTime: string; // "HH:MM", 24h — same day as startDate, after startTime
+  recurrence: EventRecurrence;
+  source: EventSource;
+}
+
+// A personal calendar linked via lib/repositories/calendarConnections.ts.
+// There's no backend to run a real OAuth/CalDAV sync against (see that
+// file's comment), so this records a simulated connection.
+export interface CalendarConnection {
+  id: string;
+  provider: CalendarProvider;
+  accountLabel: string;
+  connectedAt: string;
 }
 
 export interface CurrentUser {
@@ -84,6 +109,7 @@ export interface AuthUser {
   username: string;
   initials: string;
   avatarColor: string;
+  calendarPrivate: boolean;
 }
 
 // A join request the current user submitted (by entering an invite code)

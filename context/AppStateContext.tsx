@@ -12,14 +12,38 @@ import { AppError } from "@/lib/errors";
 import { clearSession, getSession, setSession } from "@/lib/auth/session";
 import { createApartment as createApartmentRepo, getApartmentForUser } from "@/lib/repositories/apartments";
 import {
+  connectProvider as connectProviderRepo,
+  disconnectProvider as disconnectProviderRepo,
+  listConnectionsForUser,
+} from "@/lib/repositories/calendarConnections";
+import {
+  createEvent as createEventRepo,
+  deleteEvent as deleteEventRepo,
+  listEventsForApartment,
+} from "@/lib/repositories/calendarEvents";
+import {
   cancelJoinRequest as cancelJoinRequestRepo,
   createJoinRequest,
   getMyPendingJoinRequest,
   listJoinRequestsForApartment,
   respondToJoinRequest as respondToJoinRequestRepo,
 } from "@/lib/repositories/joinRequests";
-import { createUser, findAuthUserById, verifyLogin } from "@/lib/repositories/users";
-import type { Apartment, AuthUser, IncomingJoinRequest, MyJoinRequest } from "@/types";
+import {
+  createUser,
+  findAuthUserById,
+  setCalendarPrivacy as setCalendarPrivacyRepo,
+  verifyLogin,
+} from "@/lib/repositories/users";
+import type {
+  Apartment,
+  AuthUser,
+  CalendarConnection,
+  CalendarProvider,
+  EventRecurrence,
+  IncomingJoinRequest,
+  MyJoinRequest,
+  ScheduleEvent,
+} from "@/types";
 
 interface AppState {
   isLoading: boolean;
@@ -27,6 +51,8 @@ interface AppState {
   apartment: Apartment | null;
   myJoinRequest: MyJoinRequest | null;
   incomingJoinRequests: IncomingJoinRequest[];
+  calendarEvents: ScheduleEvent[];
+  calendarConnections: CalendarConnection[];
 
   signup: (name: string, username: string, password: string) => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
@@ -36,6 +62,19 @@ interface AppState {
   requestToJoinApartment: (code: string) => Promise<void>;
   cancelMyJoinRequest: () => Promise<void>;
   respondToJoinRequest: (requestId: string, accept: boolean) => Promise<void>;
+
+  addCalendarEvent: (input: {
+    title: string;
+    description: string;
+    startDate: string;
+    startTime: string;
+    endTime: string;
+    recurrence: EventRecurrence;
+  }) => Promise<void>;
+  removeCalendarEvent: (eventId: string) => Promise<void>;
+  setCalendarPrivacy: (isPrivate: boolean) => Promise<void>;
+  connectCalendarProvider: (provider: CalendarProvider, accountLabel: string) => Promise<void>;
+  disconnectCalendarProvider: (provider: CalendarProvider) => Promise<void>;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -46,6 +85,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [apartment, setApartment] = useState<Apartment | null>(null);
   const [myJoinRequest, setMyJoinRequest] = useState<MyJoinRequest | null>(null);
   const [incomingJoinRequests, setIncomingJoinRequests] = useState<IncomingJoinRequest[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<ScheduleEvent[]>([]);
+  const [calendarConnections, setCalendarConnections] = useState<CalendarConnection[]>([]);
 
   // Loads everything that depends on who's logged in and whether they have
   // an apartment yet — called after login/signup and on cold start.
@@ -57,9 +98,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setIncomingJoinRequests(
         apt.ownerId === user.id ? await listJoinRequestsForApartment(apt.id) : []
       );
+      setCalendarEvents(await listEventsForApartment(apt.id));
+      setCalendarConnections(await listConnectionsForUser(user.id));
     } else {
       setIncomingJoinRequests([]);
       setMyJoinRequest(await getMyPendingJoinRequest(user.id));
+      setCalendarEvents([]);
+      setCalendarConnections([]);
     }
   }
 
@@ -102,6 +147,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setApartment(null);
     setMyJoinRequest(null);
     setIncomingJoinRequests([]);
+    setCalendarEvents([]);
+    setCalendarConnections([]);
   }
 
   function requireUser(): AuthUser {
@@ -136,6 +183,67 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     await loadForUser(user);
   }
 
+  function requireApartment(): Apartment {
+    if (!apartment) throw new AppError("Join an apartment first.");
+    return apartment;
+  }
+
+  async function addCalendarEvent(input: {
+    title: string;
+    description: string;
+    startDate: string;
+    startTime: string;
+    endTime: string;
+    recurrence: EventRecurrence;
+  }) {
+    const user = requireUser();
+    const apt = requireApartment();
+    const event = await createEventRepo({ apartmentId: apt.id, userId: user.id, ...input });
+    setCalendarEvents((prev) => [...prev, event]);
+  }
+
+  async function removeCalendarEvent(eventId: string) {
+    const user = requireUser();
+    await deleteEventRepo(eventId, user.id);
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== eventId));
+  }
+
+  async function setCalendarPrivacy(isPrivate: boolean) {
+    const user = requireUser();
+    await setCalendarPrivacyRepo(user.id, isPrivate);
+    setApartment((prev) =>
+      prev
+        ? {
+            ...prev,
+            roommates: prev.roommates.map((r) =>
+              r.id === user.id ? { ...r, calendarPrivate: isPrivate } : r
+            ),
+          }
+        : prev
+    );
+  }
+
+  async function connectCalendarProvider(provider: CalendarProvider, accountLabel: string) {
+    const user = requireUser();
+    const apt = requireApartment();
+    const connection = await connectProviderRepo({
+      apartmentId: apt.id,
+      userId: user.id,
+      provider,
+      accountLabel,
+    });
+    setCalendarConnections((prev) => [...prev, connection]);
+    setCalendarEvents(await listEventsForApartment(apt.id));
+  }
+
+  async function disconnectCalendarProvider(provider: CalendarProvider) {
+    const user = requireUser();
+    const apt = requireApartment();
+    await disconnectProviderRepo(user.id, provider);
+    setCalendarConnections((prev) => prev.filter((c) => c.provider !== provider));
+    setCalendarEvents(await listEventsForApartment(apt.id));
+  }
+
   const value = useMemo<AppState>(
     () => ({
       isLoading,
@@ -143,6 +251,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       apartment,
       myJoinRequest,
       incomingJoinRequests,
+      calendarEvents,
+      calendarConnections,
       signup,
       login,
       logout,
@@ -150,8 +260,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       requestToJoinApartment,
       cancelMyJoinRequest,
       respondToJoinRequest,
+      addCalendarEvent,
+      removeCalendarEvent,
+      setCalendarPrivacy,
+      connectCalendarProvider,
+      disconnectCalendarProvider,
     }),
-    [isLoading, currentUser, apartment, myJoinRequest, incomingJoinRequests]
+    [
+      isLoading,
+      currentUser,
+      apartment,
+      myJoinRequest,
+      incomingJoinRequests,
+      calendarEvents,
+      calendarConnections,
+    ]
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

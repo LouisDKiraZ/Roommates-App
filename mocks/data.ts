@@ -1,14 +1,7 @@
 // Static sample data used to render the visual skeleton.
 // Replace with real data fetching once each feature is implemented.
 
-import type {
-  Apartment,
-  CalendarEvent,
-  CleaningTask,
-  CurrentUser,
-  Expense,
-  Roommate,
-} from "@/types";
+import type { Apartment, CleaningTask, CurrentUser, Expense, Roommate } from "@/types";
 
 export const currentUser: CurrentUser = {
   id: "u1",
@@ -141,47 +134,6 @@ export const expenses: Expense[] = [
   },
 ];
 
-export const calendarEvents: CalendarEvent[] = [
-  {
-    id: "ev1",
-    title: "Rent due",
-    date: "2026-11-01",
-    color: "#E0566C",
-    source: "local",
-    attendeeIds: ["u1", "u2", "u3", "u4"],
-  },
-  {
-    id: "ev2",
-    title: "Flatmate dinner",
-    date: "2026-10-29",
-    time: "19:30",
-    color: "#F2A33C",
-    source: "google",
-    attendeeIds: ["u1", "u2", "u3", "u4"],
-  },
-  {
-    id: "ev3",
-    title: "Plumber visit",
-    date: "2026-10-30",
-    time: "10:00",
-    color: "#6C7CE0",
-    source: "local",
-    attendeeIds: ["u1"],
-  },
-  {
-    id: "ev4",
-    title: "Jamie's birthday",
-    date: "2026-11-06",
-    color: "#3DB2A8",
-    source: "apple",
-    attendeeIds: ["u2"],
-  },
-];
-
 export function getRoommate(id: string): Roommate | undefined {
   return roommates.find((r) => r.id === id);
 }
-
-// Fixed reference date for the mock data below, so the demo stays
-// consistent regardless of when it's actually run.
-export const today = "2026-10-27";
