@@ -93,7 +93,7 @@ export default function HomeScreen() {
             icon="people-outline"
             accent={Accent.success}
             label="Roommates"
-            value={`${apartment.roommates.length} people`}
+            value={`${apartment.roommates.length} ${apartment.roommates.length === 1 ? "person" : "people"}`}
             meta="Manage apartment"
             onPress={() => router.push("/(tabs)/apartment")}
           />

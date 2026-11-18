@@ -245,7 +245,9 @@ export default function CalendarScreen() {
             <Text style={{ color: textMuted, fontSize: FontSize.xs, marginTop: 2 }}>
               {awayNow.length === 0
                 ? "Everyone's in."
-                : `${awayNow.map((r) => (r.isYou ? "You" : r.name)).join(", ")} ${awayNow.length > 1 ? "are" : "is"} out.`}
+                : `${awayNow.map((r) => (r.isYou ? "You" : r.name)).join(", ")} ${
+                    awayNow.length > 1 || awayNow[0].isYou ? "are" : "is"
+                  } out.`}
             </Text>
           </View>
         </Card>
@@ -369,7 +371,11 @@ export default function CalendarScreen() {
                     Roommates still see when you&apos;re away — never the title or description.
                   </Text>
                 </View>
-                <Switch value={!!selectedPerson?.calendarPrivate} onValueChange={handleTogglePrivacy} />
+                <Switch
+                  key={`${selectedPerson?.id}-${selectedPerson?.calendarPrivate}`}
+                  value={!!selectedPerson?.calendarPrivate}
+                  onValueChange={handleTogglePrivacy}
+                />
               </Card>
             )}
 
