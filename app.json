@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "roomly",
+    "name": "Roomly",
     "slug": "roomly",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,7 +21,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -33,7 +33,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

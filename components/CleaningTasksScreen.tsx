@@ -36,7 +36,7 @@ export default function CleaningTasksScreen({
 
   // Notification Toast state
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form state
   const [taskName, setTaskName] = useState('');
@@ -253,7 +253,7 @@ export default function CleaningTasksScreen({
     const firstAssignee = isRecurring ? rotationPool[0] : assignedRoommate.trim();
 
     const newTask: CleaningTask = {
-      id: `task-${Date.now()}`,
+      id: `task-${tasks.length + 1}-${taskName.trim()}`,
       taskName: taskName.trim(),
       assignedRoommate: firstAssignee,
       dueDate: dueDate.trim() || new Date().toISOString().split('T')[0],
@@ -1524,7 +1524,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
   },
   modalContent: {

@@ -462,7 +462,7 @@ export default function PaymentSharingScreen({
       <Text style={styles.emptyEmoji}>💳</Text>
       <Text style={styles.emptyTitle}>No Expenses Recorded</Text>
       <Text style={styles.emptySubtitle}>
-        Tap "+ Add" above or click "Reset Data" to load the shared expenses scenario.
+        Tap &quot;+ Add&quot; above or click &quot;Reset Data&quot; to load the shared expenses scenario.
       </Text>
       <TouchableOpacity
         style={styles.emptyResetButton}
