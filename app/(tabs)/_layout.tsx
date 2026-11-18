@@ -1,6 +1,6 @@
-import { SymbolView } from 'expo-symbols';
 import { Link, Tabs } from 'expo-router';
-import { Platform, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -17,29 +17,26 @@ export default function TabLayout() {
         // to prevent a hydration error in React Navigation v6.
         headerShown: useClientOnlyValue(false, true),
       }}>
+      {/* Home Tab */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={24}
+              color={color}
             />
           ),
           headerRight: () => (
             <Link href="/modal" asChild>
               <Pressable style={{ marginRight: 15 }}>
                 {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'info.circle', android: 'info', web: 'info' }}
-                    size={25}
-                    tintColor={Colors[colorScheme].text}
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={24}
+                    color={Colors[colorScheme].text}
                     style={{ opacity: pressed ? 0.5 : 1 }}
                   />
                 )}
@@ -48,19 +45,34 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      {/* Cleaning Tab */}
       <Tabs.Screen
         name="two"
         options={{
-          title: 'Tab Two',
+          title: 'Cleaning',
+          headerShown: false,
           tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
+            <FontAwesome5
+              name="broom"
+              size={20}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Payments Tab */}
+      <Tabs.Screen
+        name="payments"
+        options={{
+          title: 'Payments',
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'wallet' : 'wallet-outline'}
+              size={24}
+              color={color}
             />
           ),
         }}
