@@ -1,79 +1,68 @@
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import Colors from "@/constants/Colors";
+import { useColorScheme } from "@/components/useColorScheme";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
+        headerShown: false,
+        tabBarActiveTintColor: colors.tabIconSelected,
+        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+        },
       }}>
       {/* Home Tab */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={24}
-                    color={Colors[colorScheme].text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color as string} />
           ),
         }}
       />
-
-      {/* Cleaning Tab */}
+      {/* Chores Tab */}
       <Tabs.Screen
-        name="two"
+        name="cleaning"
         options={{
-          title: 'Cleaning',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <FontAwesome5
-              name="broom"
-              size={20}
-              color={color}
-            />
+          title: "Chores",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "sparkles" : "sparkles-outline"} size={24} color={color as string} />
           ),
         }}
       />
-
-      {/* Payments Tab */}
       <Tabs.Screen
-        name="payments"
+        name="expenses"
         options={{
-          title: 'Payments',
-          headerShown: false,
+          title: "Expenses",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'wallet' : 'wallet-outline'}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? "wallet" : "wallet-outline"} size={24} color={color as string} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: "Calendar",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "calendar" : "calendar-outline"} size={24} color={color as string} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="apartment"
+        options={{
+          title: "Apartment",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "people" : "people-outline"} size={24} color={color as string} />
           ),
         }}
       />
