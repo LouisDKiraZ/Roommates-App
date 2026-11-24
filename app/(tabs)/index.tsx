@@ -54,7 +54,12 @@ export default function HomeScreen() {
           subtitle={apartment.name}
           logo={require("@/assets/logo.jpg")}
           actionIcon="notifications-outline"
-          onActionPress={() => Alert.alert("Notifications", "Nothing new yet.")}
+          onActionPress={() =>
+            Alert.alert(
+              "Notifications Unavailable",
+              "Push notifications are currently unavailable since Roomly hasn't officially launched yet. This feature will be enabled in the production release."
+            )
+          }
         />
 
         <View style={styles.section}>
