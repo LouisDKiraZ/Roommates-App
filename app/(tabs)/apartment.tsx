@@ -278,7 +278,12 @@ export default function ApartmentScreen() {
             <SettingsRow
               icon="notifications-outline"
               label="Notifications"
-              onPress={() => Alert.alert("Notifications", "Not implemented yet.")}
+              onPress={() =>
+                Alert.alert(
+                  "Notifications Unavailable",
+                  "Push notifications are currently unavailable since Roomly hasn't officially launched yet. This feature will be enabled in the production release."
+                )
+              }
             />
           </Card>
         </View>
