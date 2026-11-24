@@ -1,22 +1,34 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Text, useThemeColor } from "@/components/Themed";
-import { FontSize, FontWeight, Spacing } from "@/constants/theme";
+import { FontSize, FontWeight, Radius, Spacing } from "@/constants/theme";
 
 interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
   actionIcon?: keyof typeof Ionicons.glyphMap;
   onActionPress?: () => void;
+  logo?: ImageSourcePropType;
 }
 
-export function ScreenHeader({ title, subtitle, actionIcon, onActionPress }: ScreenHeaderProps) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  actionIcon,
+  onActionPress,
+  logo,
+}: ScreenHeaderProps) {
   const primary = useThemeColor({}, "primary");
   const primaryMuted = useThemeColor({}, "primaryMuted");
 
   return (
     <View style={styles.row}>
+      {logo && (
+        <View style={styles.logoWrap}>
+          <Image source={logo} style={styles.logoImage} resizeMode="cover" />
+        </View>
+      )}
       <View style={styles.titles}>
         <Text style={styles.title}>{title}</Text>
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
@@ -35,11 +47,27 @@ export function ScreenHeader({ title, subtitle, actionIcon, onActionPress }: Scr
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
+  },
+  logoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+    marginRight: Spacing.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
   },
   titles: {
     flex: 1,
@@ -47,11 +75,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.bold as any,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   subtitle: {
     fontSize: FontSize.sm,
-    opacity: 0.6,
+    opacity: 0.8,
     marginTop: 2,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   action: {
     width: 40,
@@ -59,5 +93,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: Spacing.sm,
   },
 });

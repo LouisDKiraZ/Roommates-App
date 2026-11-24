@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { Text, useThemeColor } from "@/components/Themed";
 import { Avatar } from "@/components/ui/Avatar";
@@ -11,14 +12,18 @@ import { Chip } from "@/components/ui/Chip";
 import { Screen } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAppState } from "@/context/AppStateContext";
-import { Accent, FontSize, FontWeight, Spacing } from "@/constants/theme";
+import { useWallpaper, VIBRANT_PRESETS, DARK_PRESETS } from "@/context/WallpaperContext";
+import { Accent, FontSize, FontWeight, Radius, Spacing } from "@/constants/theme";
 import type { IncomingJoinRequest } from "@/types";
 
 export default function ApartmentScreen() {
   const { apartment, currentUser, logout, incomingJoinRequests, respondToJoinRequest } =
     useAppState();
+  const { wallpaper, setPreset, pickImageFromGallery, resetToDefault } = useWallpaper();
   const textMuted = useThemeColor({}, "textMuted");
   const border = useThemeColor({}, "border");
+  const primary = useThemeColor({}, "primary");
+  const cardBg = useThemeColor({}, "card");
 
   const [respondingId, setRespondingId] = useState<string | null>(null);
 
@@ -68,7 +73,11 @@ export default function ApartmentScreen() {
   return (
     <Screen edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <ScreenHeader title="Apartment" subtitle={apartment.name} />
+        <ScreenHeader
+          title="Apartment"
+          subtitle={apartment.name}
+          logo={require("@/assets/logo.jpg")}
+        />
 
         <View style={styles.section}>
           <Card>
@@ -147,18 +156,134 @@ export default function ApartmentScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance & Wallpaper</Text>
+          <Card style={styles.appearanceCard}>
+            <View style={styles.appearanceHeader}>
+              <View style={styles.appearanceTitleRow}>
+                <Ionicons name="color-palette-outline" size={20} color={primary} />
+                <Text style={styles.appearanceTitle}>Tab Wallpaper</Text>
+              </View>
+              {wallpaper.type !== "default" && (
+                <Pressable onPress={resetToDefault} style={styles.resetButton}>
+                  <Text style={[styles.resetText, { color: primary }]}>Reset to default</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <Text style={[styles.appearanceDesc, { color: textMuted }]}>
+              Customize the background across your apartment tabs with built-in dark gradients or a photo from your gallery.
+            </Text>
+
+            <Text style={[styles.subLabel, { color: textMuted }]}>VIBRANT & BRIGHT</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.presetsRow}>
+              {VIBRANT_PRESETS.map((p) => {
+                const isActive = wallpaper.type === "preset" && wallpaper.presetId === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setPreset(p.id)}
+                    style={[
+                      styles.presetItem,
+                      isActive && { borderColor: primary },
+                    ]}>
+                    <LinearGradient colors={p.colors} style={styles.swatchWrap}>
+                      {isActive && (
+                        <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                      )}
+                    </LinearGradient>
+                    <Text style={[styles.swatchName, { color: textMuted }]}>{p.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={[styles.subLabel, { color: textMuted, marginTop: Spacing.xs }]}>
+              DARK & NEUTRAL
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.presetsRow}>
+              {/* Default Theme swatch */}
+              <Pressable
+                onPress={resetToDefault}
+                style={[
+                  styles.presetItem,
+                  wallpaper.type === "default" && { borderColor: primary },
+                ]}>
+                <View style={[styles.swatchWrap, { backgroundColor: cardBg }]}>
+                  {wallpaper.type === "default" && (
+                    <Ionicons name="checkmark-circle" size={22} color={primary} />
+                  )}
+                </View>
+                <Text style={[styles.swatchName, { color: textMuted }]}>Default</Text>
+              </Pressable>
+
+              {/* Dark Presets */}
+              {DARK_PRESETS.map((p) => {
+                const isActive = wallpaper.type === "preset" && wallpaper.presetId === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setPreset(p.id)}
+                    style={[
+                      styles.presetItem,
+                      isActive && { borderColor: primary },
+                    ]}>
+                    <LinearGradient colors={p.colors} style={styles.swatchWrap}>
+                      {isActive && (
+                        <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                      )}
+                    </LinearGradient>
+                    <Text style={[styles.swatchName, { color: textMuted }]}>{p.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {/* Custom Gallery Image Option */}
+            <View style={[styles.customSection, { borderTopColor: border }]}>
+              <View style={styles.customLeft}>
+                <Text style={styles.customTitle}>Custom Photo</Text>
+                <Text style={{ color: textMuted, fontSize: FontSize.xs }}>
+                  {wallpaper.type === "custom"
+                    ? "Custom gallery image active"
+                    : "Pick any photo from your device"}
+                </Text>
+              </View>
+
+              <View style={styles.customRight}>
+                {wallpaper.type === "custom" && wallpaper.customUri && (
+                  <Image source={{ uri: wallpaper.customUri }} style={styles.customThumbnail} />
+                )}
+                <View style={{ width: 120 }}>
+                  <Button
+                    label={wallpaper.type === "custom" ? "Change" : "Choose"}
+                    variant={wallpaper.type === "custom" ? "ghost" : "primary"}
+                    icon="image-outline"
+                    onPress={pickImageFromGallery}
+                  />
+                </View>
+              </View>
+            </View>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <Card style={styles.listCard}>
             <SettingsRow
               icon="notifications-outline"
               label="Notifications"
-              onPress={() => Alert.alert("Notifications", "Not implemented yet.")}
-            />
-            <View style={[styles.divider, { borderTopColor: border }]} />
-            <SettingsRow
-              icon="color-palette-outline"
-              label="Appearance"
-              onPress={() => Alert.alert("Appearance", "Not implemented yet.")}
+              onPress={() =>
+                Alert.alert(
+                  "Notifications Unavailable",
+                  "Push notifications are currently unavailable since Roomly hasn't officially launched yet. This feature will be enabled in the production release."
+                )
+              }
             />
           </Card>
         </View>
@@ -203,6 +328,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold as any,
     marginBottom: Spacing.sm,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   row: {
     flexDirection: "row",
@@ -274,5 +402,93 @@ const styles = StyleSheet.create({
   },
   divider: {
     borderTopWidth: 1,
+  },
+  appearanceCard: {
+    padding: Spacing.lg,
+  },
+  appearanceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  appearanceTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  appearanceTitle: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold as any,
+  },
+  appearanceDesc: {
+    fontSize: FontSize.sm,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.md,
+    lineHeight: 18,
+  },
+  resetButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  resetText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold as any,
+  },
+  subLabel: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold as any,
+    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
+  },
+  presetsRow: {
+    gap: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  presetItem: {
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
+    borderRadius: Radius.md + 2,
+    padding: 2,
+  },
+  swatchWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  swatchName: {
+    fontSize: FontSize.xs,
+    marginTop: 4,
+    fontWeight: FontWeight.medium as any,
+  },
+  customSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    paddingTop: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  customLeft: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  customTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold as any,
+    marginBottom: 2,
+  },
+  customRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  customThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.sm,
   },
 });

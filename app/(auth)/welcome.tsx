@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -8,15 +8,17 @@ import { Screen } from "@/components/ui/Screen";
 import { FontSize, FontWeight, Spacing } from "@/constants/theme";
 
 export default function WelcomeScreen() {
-  const primary = useThemeColor({}, "primary");
-  const primaryMuted = useThemeColor({}, "primaryMuted");
   const textMuted = useThemeColor({}, "textMuted");
 
   return (
     <Screen style={styles.safe}>
       <View style={styles.content}>
-        <View style={[styles.logo, { backgroundColor: primaryMuted }]}>
-          <Ionicons name="home" size={40} color={primary} />
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("@/assets/logo.jpg")}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
         </View>
 
         <Text style={styles.title}>Roomly</Text>
@@ -25,7 +27,7 @@ export default function WelcomeScreen() {
         </Text>
 
         <View style={styles.features}>
-          <Feature icon="sparkles-outline" label="Cleaning rotation" />
+          <Feature icon="sparkles-outline" label="Chore rotation" />
           <Feature icon="receipt-outline" label="Shared expenses" />
           <Feature icon="calendar-outline" label="Shared calendar" />
           <Feature icon="people-outline" label="Your apartment" />
@@ -66,13 +68,22 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xxl,
     alignItems: "center",
   },
-  logo: {
-    width: 72,
-    height: 72,
+  logoContainer: {
+    width: 88,
+    height: 88,
     borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
+    overflow: "hidden",
     marginBottom: Spacing.lg,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
   },
   title: {
     fontSize: 34,

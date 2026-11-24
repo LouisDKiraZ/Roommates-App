@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,12 +9,13 @@ import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAppState } from "@/context/AppStateContext";
-import { cleaningTasks, expenses, getRoommate } from "@/mocks/data";
+import { assignTasksToRoommates } from "@/lib/cleaning";
 import { Accent, FontSize, FontWeight, Radius, Spacing } from "@/constants/theme";
 import { isEventActiveAt } from "@/lib/calendarRecurrence";
 
 export default function HomeScreen() {
-  const { apartment, currentUser, calendarEvents } = useAppState();
+  const { apartment, currentUser, calendarEvents, cleaningTasks, expenses, toggleCleaningTask } =
+    useAppState();
   const textMuted = useThemeColor({}, "textMuted");
   const border = useThemeColor({}, "border");
 
@@ -26,9 +27,16 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  const roommates = useMemo(() => apartment?.roommates ?? [], [apartment?.roommates]);
+
+  const tasks = useMemo(
+    () => assignTasksToRoommates(cleaningTasks, roommates),
+    [cleaningTasks, roommates]
+  );
+
   if (!apartment || !currentUser) return null;
 
-  const nextTask = cleaningTasks.find((t) => !t.done);
+  const nextTask = tasks.find((t) => !t.done);
   const latestExpense = expenses[0];
 
   const awayNow = apartment.roommates.filter((r) =>
@@ -44,8 +52,14 @@ export default function HomeScreen() {
         <ScreenHeader
           title={`Hi, ${currentUser.name} 👋`}
           subtitle={apartment.name}
+          logo={require("@/assets/logo.jpg")}
           actionIcon="notifications-outline"
-          onActionPress={() => Alert.alert("Notifications", "Nothing new yet.")}
+          onActionPress={() =>
+            Alert.alert(
+              "Notifications Unavailable",
+              "Push notifications are currently unavailable since Roomly hasn't officially launched yet. This feature will be enabled in the production release."
+            )
+          }
         />
 
         <View style={styles.section}>
@@ -69,16 +83,16 @@ export default function HomeScreen() {
             icon="sparkles-outline"
             accent={Accent.cleaning}
             label="Next chore"
-            value={nextTask ? nextTask.title : "All done!"}
-            meta={nextTask ? nextTask.dueLabel : "Nothing pending"}
+            value={nextTask ? nextTask.title : tasks.length === 0 ? "No chores yet" : "All done!"}
+            meta={nextTask ? nextTask.dueLabel : tasks.length === 0 ? "Nothing scheduled" : "Nothing pending"}
             onPress={() => router.push("/(tabs)/cleaning")}
           />
           <SummaryCard
             icon="wallet-outline"
             accent={Accent.expenses}
             label="Latest expense"
-            value={`$${latestExpense.amount.toFixed(2)}`}
-            meta={latestExpense.title}
+            value={latestExpense ? `$${latestExpense.amount.toFixed(2)}` : "No expenses yet"}
+            meta={latestExpense ? latestExpense.title : "Nothing logged"}
             onPress={() => router.push("/(tabs)/expenses")}
           />
           <SummaryCard
@@ -102,29 +116,40 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>This week</Text>
           <Card style={[styles.weekCard, { borderColor: border }]}>
-            {cleaningTasks.slice(0, 3).map((task, i) => {
-              const assignee = getRoommate(task.assigneeId);
-              return (
-                <View
-                  key={task.id}
-                  style={[
-                    styles.weekRow,
-                    i > 0 && { borderTopWidth: 1, borderTopColor: border },
-                  ]}>
-                  <Ionicons
-                    name={task.done ? "checkmark-circle" : "ellipse-outline"}
-                    size={20}
-                    color={task.done ? Accent.success : textMuted}
-                  />
-                  <Text style={[styles.weekTaskTitle, task.done && styles.weekTaskDone]}>
-                    {task.title}
-                  </Text>
-                  <Text style={{ color: textMuted, fontSize: FontSize.xs }}>
-                    {assignee?.name}
-                  </Text>
-                </View>
-              );
-            })}
+            {tasks.length === 0 ? (
+              <View style={styles.emptyWeek}>
+                <Ionicons name="sparkles-outline" size={24} color={textMuted} />
+                <Text style={[styles.emptyWeekText, { color: textMuted }]}>
+                  No chores yet this week
+                </Text>
+              </View>
+            ) : (
+              tasks.slice(0, 3).map((task, i) => {
+                const assignee = apartment.roommates.find((r) => r.id === task.assigneeId);
+                const assigneeName = assignee ? (assignee.isYou ? "You" : assignee.name) : "Unassigned";
+                return (
+                  <Pressable
+                    key={task.id}
+                    onPress={() => toggleCleaningTask(task.id)}
+                    style={[
+                      styles.weekRow,
+                      i > 0 && { borderTopWidth: 1, borderTopColor: border },
+                    ]}>
+                    <Ionicons
+                      name={task.done ? "checkmark-circle" : "ellipse-outline"}
+                      size={20}
+                      color={task.done ? Accent.success : textMuted}
+                    />
+                    <Text style={[styles.weekTaskTitle, task.done && styles.weekTaskDone]}>
+                      {task.title}
+                    </Text>
+                    <Text style={{ color: textMuted, fontSize: FontSize.xs }}>
+                      {assigneeName}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
           </Card>
         </View>
       </ScrollView>
@@ -221,6 +246,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold as any,
     marginBottom: Spacing.md,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   weekCard: {
     padding: 0,
@@ -239,5 +267,14 @@ const styles = StyleSheet.create({
   weekTaskDone: {
     textDecorationLine: "line-through",
     opacity: 0.5,
+  },
+  emptyWeek: {
+    padding: Spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyWeekText: {
+    fontSize: FontSize.sm,
+    marginTop: Spacing.xs,
   },
 });

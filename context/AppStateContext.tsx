@@ -7,6 +7,7 @@
 // for this context.
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { AppError } from "@/lib/errors";
 import { clearSession, getSession, setSession } from "@/lib/auth/session";
@@ -39,10 +40,15 @@ import type {
   AuthUser,
   CalendarConnection,
   CalendarProvider,
+  CleaningTask,
   EventRecurrence,
+  Expense,
+  ExpenseCategory,
+  ExpenseSplit,
   IncomingJoinRequest,
   MyJoinRequest,
   ScheduleEvent,
+  TaskFrequency,
 } from "@/types";
 
 interface AppState {
@@ -53,6 +59,8 @@ interface AppState {
   incomingJoinRequests: IncomingJoinRequest[];
   calendarEvents: ScheduleEvent[];
   calendarConnections: CalendarConnection[];
+  cleaningTasks: CleaningTask[];
+  expenses: Expense[];
 
   signup: (name: string, username: string, password: string) => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
@@ -62,6 +70,29 @@ interface AppState {
   requestToJoinApartment: (code: string) => Promise<void>;
   cancelMyJoinRequest: () => Promise<void>;
   respondToJoinRequest: (requestId: string, accept: boolean) => Promise<void>;
+
+  addCleaningTask: (input: {
+    title: string;
+    assigneeId: string;
+    frequency?: TaskFrequency;
+    frequencyDays?: number;
+    isRecurring?: boolean;
+    rotationPool?: string[];
+    icon?: string;
+    dueLabel?: string;
+  }) => Promise<void>;
+  toggleCleaningTask: (taskId: string) => Promise<void>;
+  rotateCleaningTasks: () => Promise<void>;
+  removeCleaningTask: (taskId: string) => Promise<void>;
+
+  addExpense: (input: {
+    title: string;
+    amount: number;
+    category: ExpenseCategory;
+    paidById: string;
+    splitWithIds?: string[];
+  }) => Promise<void>;
+  removeExpense: (expenseId: string) => Promise<void>;
 
   addCalendarEvent: (input: {
     title: string;
@@ -87,6 +118,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [incomingJoinRequests, setIncomingJoinRequests] = useState<IncomingJoinRequest[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<ScheduleEvent[]>([]);
   const [calendarConnections, setCalendarConnections] = useState<CalendarConnection[]>([]);
+  const [cleaningTasks, setCleaningTasks] = useState<CleaningTask[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Loads everything that depends on who's logged in and whether they have
   // an apartment yet — called after login/signup and on cold start.
@@ -100,11 +133,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       );
       setCalendarEvents(await listEventsForApartment(apt.id));
       setCalendarConnections(await listConnectionsForUser(user.id));
+      try {
+        const storedTasks = await AsyncStorage.getItem(`@roomly_tasks_${apt.id}`);
+        setCleaningTasks(storedTasks ? JSON.parse(storedTasks) : []);
+      } catch {
+        setCleaningTasks([]);
+      }
+      try {
+        const storedExpenses = await AsyncStorage.getItem(`@roomly_expenses_${apt.id}`);
+        setExpenses(storedExpenses ? JSON.parse(storedExpenses) : []);
+      } catch {
+        setExpenses([]);
+      }
     } else {
       setIncomingJoinRequests([]);
       setMyJoinRequest(await getMyPendingJoinRequest(user.id));
       setCalendarEvents([]);
       setCalendarConnections([]);
+      setCleaningTasks([]);
+      setExpenses([]);
     }
   }
 
@@ -149,6 +196,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setIncomingJoinRequests([]);
     setCalendarEvents([]);
     setCalendarConnections([]);
+    setCleaningTasks([]);
+    setExpenses([]);
   }
 
   function requireUser(): AuthUser {
@@ -244,6 +293,128 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCalendarEvents(await listEventsForApartment(apt.id));
   }
 
+  async function addCleaningTask(input: {
+    title: string;
+    assigneeId: string;
+    frequency?: TaskFrequency;
+    frequencyDays?: number;
+    isRecurring?: boolean;
+    rotationPool?: string[];
+    icon?: string;
+    dueLabel?: string;
+  }) {
+    const apt = requireApartment();
+    const days = input.frequencyDays ?? 7;
+    const freq: TaskFrequency =
+      input.frequency ??
+      (days <= 1 ? "daily" : days <= 7 ? "weekly" : days <= 14 ? "biweekly" : "monthly");
+
+    const newTask: CleaningTask = {
+      id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      title: input.title.trim(),
+      assigneeId: input.assigneeId,
+      frequency: freq,
+      frequencyDays: days,
+      isRecurring: input.isRecurring ?? true,
+      rotationPool: input.rotationPool,
+      icon: input.icon || "sparkles-outline",
+      dueLabel: input.dueLabel || `Every ${days} ${days === 1 ? "day" : "days"}`,
+      done: false,
+    };
+
+    const updated = [newTask, ...cleaningTasks];
+    setCleaningTasks(updated);
+    await AsyncStorage.setItem(`@roomly_tasks_${apt.id}`, JSON.stringify(updated));
+  }
+
+  async function toggleCleaningTask(taskId: string) {
+    const apt = requireApartment();
+    const updated = cleaningTasks.map((t) =>
+      t.id === taskId ? { ...t, done: !t.done } : t
+    );
+    setCleaningTasks(updated);
+    await AsyncStorage.setItem(`@roomly_tasks_${apt.id}`, JSON.stringify(updated));
+  }
+
+  async function rotateCleaningTasks() {
+    const apt = requireApartment();
+    if (apt.roommates.length <= 1) return;
+
+    const updated = cleaningTasks.map((task) => {
+      if (task.rotationPool && task.rotationPool.length > 0) {
+        const pool = task.rotationPool;
+        const currentIdx = pool.findIndex((id) => id === task.assigneeId);
+        const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % pool.length : 0;
+        return {
+          ...task,
+          assigneeId: pool[nextIdx],
+        };
+      }
+      const currentIndex = apt.roommates.findIndex((r) => r.id === task.assigneeId);
+      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % apt.roommates.length;
+      return {
+        ...task,
+        assigneeId: apt.roommates[nextIndex].id,
+      };
+    });
+
+    setCleaningTasks(updated);
+    await AsyncStorage.setItem(`@roomly_tasks_${apt.id}`, JSON.stringify(updated));
+  }
+
+  async function removeCleaningTask(taskId: string) {
+    const apt = requireApartment();
+    const updated = cleaningTasks.filter((t) => t.id !== taskId);
+    setCleaningTasks(updated);
+    await AsyncStorage.setItem(`@roomly_tasks_${apt.id}`, JSON.stringify(updated));
+  }
+
+  async function addExpense(input: {
+    title: string;
+    amount: number;
+    category: ExpenseCategory;
+    paidById: string;
+    splitWithIds?: string[];
+  }) {
+    const apt = requireApartment();
+    const splitMembers =
+      input.splitWithIds && input.splitWithIds.length > 0
+        ? apt.roommates.filter((r) => input.splitWithIds!.includes(r.id))
+        : apt.roommates;
+
+    const totalMembers = splitMembers.length > 0 ? splitMembers.length : 1;
+    const splitAmount = Math.round((input.amount / totalMembers) * 100) / 100;
+
+    const splits: ExpenseSplit[] = splitMembers.map((r) => ({
+      roommateId: r.id,
+      amount: splitAmount,
+      settled: r.id === input.paidById,
+    }));
+
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const newExpense: Expense = {
+      id: `exp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      title: input.title.trim(),
+      category: input.category,
+      amount: Math.round(input.amount * 100) / 100,
+      paidById: input.paidById,
+      date: todayStr,
+      splits,
+    };
+
+    const updated = [newExpense, ...expenses];
+    setExpenses(updated);
+    await AsyncStorage.setItem(`@roomly_expenses_${apt.id}`, JSON.stringify(updated));
+  }
+
+  async function removeExpense(expenseId: string) {
+    const apt = requireApartment();
+    const updated = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(updated);
+    await AsyncStorage.setItem(`@roomly_expenses_${apt.id}`, JSON.stringify(updated));
+  }
+
   const value = useMemo<AppState>(
     () => ({
       isLoading,
@@ -253,6 +424,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       incomingJoinRequests,
       calendarEvents,
       calendarConnections,
+      cleaningTasks,
+      expenses,
       signup,
       login,
       logout,
@@ -260,12 +433,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       requestToJoinApartment,
       cancelMyJoinRequest,
       respondToJoinRequest,
+      addCleaningTask,
+      toggleCleaningTask,
+      rotateCleaningTasks,
+      removeCleaningTask,
+      addExpense,
+      removeExpense,
       addCalendarEvent,
       removeCalendarEvent,
       setCalendarPrivacy,
       connectCalendarProvider,
       disconnectCalendarProvider,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       isLoading,
       currentUser,
@@ -274,6 +454,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       incomingJoinRequests,
       calendarEvents,
       calendarConnections,
+      cleaningTasks,
+      expenses,
     ]
   );
 

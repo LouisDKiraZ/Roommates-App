@@ -15,6 +15,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Fab } from "@/components/ui/Fab";
+import { PersonChip } from "@/components/ui/PersonChip";
 import { Screen } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { TextField } from "@/components/ui/TextField";
@@ -227,7 +228,11 @@ export default function CalendarScreen() {
 
   return (
     <Screen edges={["top"]}>
-      <ScreenHeader title="Calendar" subtitle="Who's in, who's out" />
+      <ScreenHeader
+        title="Calendar"
+        subtitle="Who's in, who's out"
+        logo={require("@/assets/logo.jpg")}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <Card style={styles.presenceCard}>
@@ -584,35 +589,6 @@ export default function CalendarScreen() {
   );
 }
 
-function PersonChip({
-  label,
-  color,
-  selected,
-  onPress,
-}: {
-  label: string;
-  color?: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const primary = useThemeColor({}, "primary");
-  const primaryMuted = useThemeColor({}, "primaryMuted");
-  const border = useThemeColor({}, "border");
-  const text = useThemeColor({}, "text");
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.personChip,
-        { borderColor: selected ? primary : border, backgroundColor: selected ? primaryMuted : "transparent" },
-      ]}>
-      {color && <View style={[styles.personDot, { backgroundColor: color }]} />}
-      <Text style={[styles.personChipLabel, { color: selected ? primary : text }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function RecurrenceChip({
   label,
   selected,
@@ -767,6 +743,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold as any,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   absentRow: {
     flexDirection: "row",

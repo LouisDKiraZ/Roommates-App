@@ -33,6 +33,9 @@ export interface CleaningTask {
   frequency: TaskFrequency;
   dueLabel: string; // e.g. "Today", "Tomorrow", "Mon 3 Nov"
   done: boolean;
+  frequencyDays?: number; // Days between recurrences from slider (1 to 30)
+  isRecurring?: boolean;
+  rotationPool?: string[]; // Ordered list of roommate IDs in rotation
 }
 
 export type ExpenseCategory =

@@ -125,8 +125,8 @@ app/                        Expo Router routes — one file = one screen
     _layout.tsx
     index.tsx                 Home dashboard (real apartment identity + live presence card,
                                 mock chore/expense preview)
-    cleaning.tsx               Feature 1 — still mock
-    expenses.tsx                Feature 2 — still mock
+    cleaning.tsx               Feature 1 — dynamic apartment member rotation & task assignment
+    expenses.tsx                Feature 2 — dynamic apartment member expense splitting & debt simplification
     calendar.tsx                 Feature 3, real: presence banner, global/person month
                                    view, add/delete events, privacy toggle, connect-a-
                                    calendar (simulated)
@@ -152,6 +152,7 @@ constants/
 context/
   AppStateContext.tsx         Real auth + apartment/join-request state — the only thing
                                screens call; delegates to lib/repositories/*, see above
+  WallpaperContext.tsx        Customizable wallpaper state (presets & gallery photo) persisted via AsyncStorage
 
 types/index.ts                Domain types. Real: AuthUser (+ calendarPrivate),
                                MyJoinRequest, IncomingJoinRequest, ScheduleEvent,
@@ -159,10 +160,11 @@ types/index.ts                Domain types. Real: AuthUser (+ calendarPrivate),
                                Mock-facing (unchanged): Roommate, Apartment (now with
                                ownerId), CleaningTask, Expense, ExpenseSplit, CurrentUser
 
-mocks/data.ts                 Sample data for the still-mock features (cleaning,
-                               expenses) — this is what those 2 screens render
+mocks/data.ts                 Chore and expense template definitions (adapted dynamically)
 
 lib/
+  cleaning.ts                  Chore assignment, rotation, and member filtering
+  expenses.ts                  Dynamic expense distribution, balance calculation, and debt simplification
   calendarGrid.ts              Pure month-grid helper for the calendar screen
   calendarRecurrence.ts        Pure date math: does an event occur on date X, is it
                                 active right now, recurrence labels — no DB access

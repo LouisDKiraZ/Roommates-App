@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -82,6 +82,13 @@ export default function ApartmentOnboardingScreen() {
       <View style={styles.content}>
         {mode === "choose" && (
           <>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("@/assets/logo.jpg")}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
             <Text style={styles.title}>One last step</Text>
             <Text style={[styles.subtitle, { color: textMuted }]}>
               Create a new apartment, or request to join one with an invite code.
@@ -226,6 +233,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.lg,
+  },
+  logoContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: Spacing.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
   },
   title: {
     fontSize: FontSize.xxl,

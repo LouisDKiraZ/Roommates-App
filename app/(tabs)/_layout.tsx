@@ -29,11 +29,11 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Cleaning Tab */}
+      {/* Chores Tab */}
       <Tabs.Screen
         name="cleaning"
         options={{
-          title: "Cleaning",
+          title: "Chores",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "sparkles" : "sparkles-outline"} size={24} color={color as string} />
           ),
