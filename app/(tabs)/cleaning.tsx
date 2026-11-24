@@ -46,6 +46,8 @@ const CHORE_ICONS = [
   { icon: "leaf-outline", label: "Plants" },
 ];
 
+type StatusFilter = "all" | "pending" | "completed";
+
 export default function CleaningScreen() {
   const {
     apartment,
@@ -54,6 +56,7 @@ export default function CleaningScreen() {
     addCleaningTask,
     toggleCleaningTask,
     rotateCleaningTasks,
+    removeCleaningTask,
   } = useAppState();
   const textMuted = useThemeColor({}, "textMuted");
   const card = useThemeColor({}, "card");
@@ -64,6 +67,7 @@ export default function CleaningScreen() {
 
   const roommates = useMemo(() => apartment?.roommates ?? [], [apartment?.roommates]);
   const [selectedPersonId, setSelectedPersonId] = useState<"all" | string>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   // Original Custom Modal Form States
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -83,10 +87,24 @@ export default function CleaningScreen() {
     [cleaningTasks, roommates]
   );
 
-  const visibleTasks = useMemo(
+  const roommateTasks = useMemo(
     () => filterTasksByRoommate(activeTasks, selectedPersonId),
     [activeTasks, selectedPersonId]
   );
+
+  const allCount = roommateTasks.length;
+  const pendingCount = roommateTasks.filter((t) => !t.done).length;
+  const completedCount = roommateTasks.filter((t) => t.done).length;
+
+  const visibleTasks = useMemo(() => {
+    if (statusFilter === "pending") {
+      return roommateTasks.filter((t) => !t.done);
+    }
+    if (statusFilter === "completed") {
+      return roommateTasks.filter((t) => t.done);
+    }
+    return roommateTasks;
+  }, [roommateTasks, statusFilter]);
 
   const selectedPerson = useMemo(() => {
     if (selectedPersonId === "all") return null;
@@ -95,7 +113,7 @@ export default function CleaningScreen() {
 
   if (!apartment || !currentUser) return null;
 
-  const pendingCount = activeTasks.filter((t) => !t.done).length;
+  const totalPendingCount = activeTasks.filter((t) => !t.done).length;
 
   function openAddModal() {
     setTaskName("");
@@ -139,6 +157,23 @@ export default function CleaningScreen() {
 
   function handleToggleDone(taskId: string) {
     toggleCleaningTask(taskId);
+  }
+
+  function handleDeleteTask(taskId: string, title: string) {
+    Alert.alert(
+      "Delete Chore",
+      `Are you sure you want to delete "${title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await removeCleaningTask(taskId);
+          },
+        },
+      ]
+    );
   }
 
   async function handleCreateTask() {
@@ -189,7 +224,7 @@ export default function CleaningScreen() {
         subtitle={
           activeTasks.length === 0
             ? "No chores yet"
-            : `${pendingCount} task${pendingCount === 1 ? "" : "s"} left this week`
+            : `${totalPendingCount} task${totalPendingCount === 1 ? "" : "s"} left this week`
         }
         logo={require("@/assets/logo.jpg")}
         actionIcon="repeat-outline"
@@ -232,6 +267,52 @@ export default function CleaningScreen() {
         ))}
       </ScrollView>
 
+      <View style={styles.statusFilterWrap}>
+        <View style={[styles.statusFilterContainer, { backgroundColor: card, borderColor: border }]}>
+          {([
+            { id: "all", label: "All", count: allCount },
+            { id: "pending", label: "Pending", count: pendingCount },
+            { id: "completed", label: "Completed", count: completedCount },
+          ] as const).map((tab) => {
+            const isActive = statusFilter === tab.id;
+            return (
+              <Pressable
+                key={tab.id}
+                onPress={() => setStatusFilter(tab.id)}
+                style={[
+                  styles.statusFilterTab,
+                  isActive && {
+                    backgroundColor: `${Accent.cleaning}22`,
+                    borderColor: Accent.cleaning,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.statusFilterTabText,
+                    { color: isActive ? Accent.cleaning : textMuted },
+                    isActive && { fontWeight: FontWeight.bold as any },
+                  ]}>
+                  {tab.label}
+                </Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: isActive ? Accent.cleaning : border },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: isActive ? "#FFFFFF" : textMuted },
+                    ]}>
+                    {tab.count}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       <ScrollView contentContainerStyle={styles.list}>
         {visibleTasks.length === 0 ? (
           <Card style={styles.emptyCard}>
@@ -242,14 +323,24 @@ export default function CleaningScreen() {
               style={styles.emptyIcon}
             />
             <Text style={[styles.emptyTitle, { color: textMuted }]}>
-              {selectedPerson
+              {activeTasks.length === 0
+                ? "No chores yet"
+                : statusFilter === "pending"
+                ? "No pending chores"
+                : statusFilter === "completed"
+                ? "No completed chores"
+                : selectedPerson
                 ? `No chores assigned to ${selectedPerson.isYou ? "you" : selectedPerson.name}.`
-                : "No chores yet"}
+                : "No chores found"}
             </Text>
             <Text style={[styles.emptySubtitle, { color: textMuted }]}>
-              {selectedPerson
-                ? "This roommate has no pending chores."
-                : "Chores added for your apartment will appear here."}
+              {activeTasks.length === 0
+                ? "Chores added for your apartment will appear here."
+                : statusFilter === "pending"
+                ? "All caught up! No chores pending."
+                : statusFilter === "completed"
+                ? "Completed chores will appear here once marked as done."
+                : "No chores found matching the selected filters."}
             </Text>
           </Card>
         ) : (
@@ -309,10 +400,21 @@ export default function CleaningScreen() {
                     </View>
                   </View>
 
-                  <Chip
-                    label={task.done ? "Done" : displayFreq}
-                    color={task.done ? Accent.success : Accent.cleaning}
-                  />
+                  <View style={styles.taskRightActions}>
+                    <Chip
+                      label={task.done ? "Done" : displayFreq}
+                      color={task.done ? Accent.success : Accent.cleaning}
+                    />
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task.id, task.title);
+                      }}
+                      hitSlop={8}
+                      style={styles.deleteButton}>
+                      <Ionicons name="trash-outline" size={17} color={textMuted} />
+                    </Pressable>
+                  </View>
                 </Card>
               </Pressable>
             );
@@ -903,5 +1005,57 @@ const styles = StyleSheet.create({
     color: Accent.danger,
     fontSize: FontSize.sm,
     marginBottom: Spacing.sm,
+  },
+  statusFilterWrap: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  statusFilterContainer: {
+    flexDirection: "row",
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    padding: 3,
+    gap: 4,
+  },
+  statusFilterTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: "transparent",
+    gap: 6,
+  },
+  statusFilterTabText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium as any,
+  },
+  statusBadge: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    minWidth: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold as any,
+  },
+  taskRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  deleteButton: {
+    padding: 4,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

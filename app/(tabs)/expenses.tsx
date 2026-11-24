@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Text, useThemeColor } from "@/components/Themed";
@@ -46,7 +46,7 @@ const CATEGORY_OPTIONS: ExpenseCategory[] = [
 ];
 
 export default function ExpensesScreen() {
-  const { apartment, currentUser, expenses, addExpense } = useAppState();
+  const { apartment, currentUser, expenses, addExpense, removeExpense } = useAppState();
   const textMuted = useThemeColor({}, "textMuted");
   const card = useThemeColor({}, "card");
   const border = useThemeColor({}, "border");
@@ -123,6 +123,23 @@ export default function ExpensesScreen() {
     } else {
       setSplitWithIds(roommates.map((r) => r.id));
     }
+  }
+
+  function handleDeleteExpense(expenseId: string, title: string) {
+    Alert.alert(
+      "Delete Expense",
+      `Are you sure you want to delete "${title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await removeExpense(expenseId);
+          },
+        },
+      ]
+    );
   }
 
   // Calculate preview split amount
@@ -312,7 +329,15 @@ export default function ExpensesScreen() {
                       Paid by {payerName} · {expense.date}
                     </Text>
                   </View>
-                  <Text style={styles.expenseAmount}>${expense.amount.toFixed(2)}</Text>
+                  <View style={styles.expenseAmountWrap}>
+                    <Text style={styles.expenseAmount}>${expense.amount.toFixed(2)}</Text>
+                    <Pressable
+                      onPress={() => handleDeleteExpense(expense.id, expense.title)}
+                      hitSlop={8}
+                      style={styles.deleteButton}>
+                      <Ionicons name="trash-outline" size={18} color={textMuted} />
+                    </Pressable>
+                  </View>
                 </View>
 
                 <View style={styles.expenseBottom}>
@@ -604,6 +629,15 @@ const styles = StyleSheet.create({
   expenseAmount: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold as any,
+  },
+  expenseAmountWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  deleteButton: {
+    padding: Spacing.xs,
+    borderRadius: Radius.sm,
   },
   expenseBottom: {
     flexDirection: "row",

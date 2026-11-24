@@ -83,6 +83,7 @@ interface AppState {
   }) => Promise<void>;
   toggleCleaningTask: (taskId: string) => Promise<void>;
   rotateCleaningTasks: () => Promise<void>;
+  removeCleaningTask: (taskId: string) => Promise<void>;
 
   addExpense: (input: {
     title: string;
@@ -91,6 +92,7 @@ interface AppState {
     paidById: string;
     splitWithIds?: string[];
   }) => Promise<void>;
+  removeExpense: (expenseId: string) => Promise<void>;
 
   addCalendarEvent: (input: {
     title: string;
@@ -360,6 +362,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(`@roomly_tasks_${apt.id}`, JSON.stringify(updated));
   }
 
+  async function removeCleaningTask(taskId: string) {
+    const apt = requireApartment();
+    const updated = cleaningTasks.filter((t) => t.id !== taskId);
+    setCleaningTasks(updated);
+    await AsyncStorage.setItem(`@roomly_tasks_${apt.id}`, JSON.stringify(updated));
+  }
+
   async function addExpense(input: {
     title: string;
     amount: number;
@@ -399,6 +408,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(`@roomly_expenses_${apt.id}`, JSON.stringify(updated));
   }
 
+  async function removeExpense(expenseId: string) {
+    const apt = requireApartment();
+    const updated = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(updated);
+    await AsyncStorage.setItem(`@roomly_expenses_${apt.id}`, JSON.stringify(updated));
+  }
+
   const value = useMemo<AppState>(
     () => ({
       isLoading,
@@ -420,7 +436,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       addCleaningTask,
       toggleCleaningTask,
       rotateCleaningTasks,
+      removeCleaningTask,
       addExpense,
+      removeExpense,
       addCalendarEvent,
       removeCalendarEvent,
       setCalendarPrivacy,
